@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 /*
 
-    flow  Consensus assembly, variant calling, and allele interpretation workflow.
+    flow-validation  Consensus assembly, variant calling, and allele interpretation workflow.
     Copyright (c) 2014-2015 National Marrow Donor Program (NMDP)
 
     This library is free software; you can redistribute it and/or modify it
