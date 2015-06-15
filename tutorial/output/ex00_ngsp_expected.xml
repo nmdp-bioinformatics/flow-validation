@@ -1,6 +1,6 @@
 <!--
 
-    pipeline  Consensus assembly and allele interpretation pipeline.
+    flow-validation  Validation workflow.
     Copyright (c) 2015 National Marrow Donor Program (NMDP)
 
     This library is free software; you can redistribute it and/or modify it

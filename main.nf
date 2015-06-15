@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 /*
 
-    flow-validation  Consensus assembly, variant calling, and allele interpretation workflow.
+    flow-validation  Validation workflow.
     Copyright (c) 2014-2015 National Marrow Donor Program (NMDP)
 
     This library is free software; you can redistribute it and/or modify it
@@ -56,7 +56,7 @@ process validationReport{
 		file validated_file
 
 	"""
-		ngs-validation-report -e ${params.expected} -o ${observed_file} -l ${validated_file} -p ${params.finalDir} -f 1 -v 1 2> report.stderr
+		ngs-validation-report -e ${params.expected} -o ${observed_file} -l ${validated_file} -p ${params.finalDir} -f 1 -v 1 
   """
 }
 
