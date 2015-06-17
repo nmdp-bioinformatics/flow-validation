@@ -31,7 +31,7 @@ observedFiles = Channel.fromPath("${params.finalDir}/*.gz")
 observed_file = observedFiles.collectFile(name:"${params.finalDir}/output/${params.experiment}_ngsp_observed.gz")
 
 process validateInterpretation {
-	tag{ s }
+	tag{ s  }
 
   input:
     set s, locus, file(observed_gz) from observed
