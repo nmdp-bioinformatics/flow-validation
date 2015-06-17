@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <!--
 
     flow-validation  Validation workflow.
@@ -20,7 +21,6 @@
     > http://www.gnu.org/licenses/lgpl.html
 
 -->
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <hml version="1.0.1" project-name="ABDR" xmlns="http://schemas.nmdp.org/spec/hml/1.0.1">
     <hmlid root="2.16.840.1.113883.3.1470" extension="20150220.hml101.54"/>
     <reporting-center reporting-center-id="751"/>
