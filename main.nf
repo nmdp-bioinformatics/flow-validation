@@ -57,7 +57,7 @@ process validationReport{
 		file validated_file
 
 	"""
-		ngs-validation-report -e ${params.expected} -o ${observed_file} -l ${validated_file} -p ${params.outputDir} -f 1 -v 1 
+		ngs-validation-report -e ${params.expected} -o ${observed_file} -l ${validated_file} -p ${params.outputDir} -f -v 1 
   """
 }
 
@@ -65,7 +65,7 @@ process validationReport{
 def sample(Path path) {
   def name = path.getFileName().toString()
   int start = Math.max(0, name.lastIndexOf('/'))
-  return name.substring(start, name.indexOf("."))
+  return name.substring(start, name.indexOf("_"))
 }
 
 def locus(Path path) {
