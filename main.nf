@@ -27,8 +27,8 @@ params.outputDir   = "${baseDir}"
 params.experiment  = "ex00"
 params.resolution  = 2
 
-observed      = Channel.fromPath("${params.finalDir}/*.gz").map { path -> tuple(sample(path), locus(path), path )}
-observedFiles = Channel.fromPath("${params.finalDir}/*.gz")
+observed      = Channel.fromPath("${params.finalDir}/*.observed.gz").map { path -> tuple(sample(path), locus(path), path )}
+observedFiles = Channel.fromPath("${params.finalDir}/*.observed.gz")
 observed_file = observedFiles.collectFile(name:"${params.finalDir}/output/${params.experiment}_ngsp_observed.gz")
 
 process validateInterpretation {
