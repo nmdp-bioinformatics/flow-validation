@@ -27,9 +27,11 @@ params.outputDir   = "${baseDir}"
 params.experiment  = "ex00"
 params.resolution  = 2
 
+outputDir     = file("${params.outputDir}")
+
 observed      = Channel.fromPath("${params.finalDir}/*.observed.gz").map { path -> tuple(sample(path), locus(path), path )}
 observedFiles = Channel.fromPath("${params.finalDir}/*.observed.gz")
-observed_file = observedFiles.collectFile(name:"${params.finalDir}/output/${params.experiment}_ngsp_observed.gz")
+observed_file = observedFiles.collectFile(name:"${params.finalDir}/${params.experiment}_ngsp_observed.gz")
 
 process validateInterpretation {
 	tag{ s }
@@ -45,27 +47,89 @@ process validateInterpretation {
   """
 
 }
-
-validated_file = validatedFile.collectFile(name:"${params.finalDir}/output/${params.experiment}_ngsp_validated.txt")
+validated_file = validatedFile.collectFile(name:"${params.finalDir}/${params.experiment}_ngsp_validated.txt")
 
 
 process validationReport{
 	tag{ validated_file }
 
+  maxForks 1
+
 	input:
 		file observed_file
 		file validated_file
 
+  output:
+    file {"failedSubjects.csv"} into failed
+    file {"passedSubjects.csv"} into passed
+    file {"validationReport.tar.gz"} into compressedReport
+
 	"""
-		ngs-validation-report -e ${params.expected} -o ${observed_file} -l ${validated_file} -p ${params.outputDir} -f -v 1 
+		ngs-validation-report -e ${params.expected} -o ${observed_file} -l ${validated_file} -f -r -v 1
+    tar -zcvf validationReport.tar.gz report
   """
 }
 
 
+failedSubjects = failed.splitCsv()
+.collectFile() { row ->
+       [ "${row[0]}.txt", row[1] + '\n' ]
+   }
+.map{path -> 
+  tuple(sample(path), path )
+}
+
+passedSubjects = passed.splitCsv()
+.collectFile() { row ->
+       [ "${row[0]}.txt", row[1] + '\n' ]
+   }
+.map{path -> 
+  tuple(sample(path), path )
+}
+
+// Filtering out the failed subjects
+process filterFailedHml{
+  tag{ exp }
+
+  input:
+    set exp, file(failedFile) from failedSubjects
+
+  output:
+    file{"${exp}_failed.xml"} into failedHmlFile
+
+  """
+    ngs-filter-samples -i ${params.expected} -s ${failedFile} > ${exp}_failed.xml
+  """
+}
+
+// Filtering out the passed subjects
+process filterPassedHml{
+  tag{ exp }
+
+  input:
+    set exp, file(failedFile) from passedSubjects
+
+  output:
+    file{"${exp}_passed.xml"} into passedHmlFile
+
+  """
+    ngs-filter-samples -i ${params.expected} -s ${failedFile} > ${exp}_passed.xml
+  """
+}
+
+passedHmlFile.subscribe { file -> copyToFinalDir(file) }
+failedHmlFile.subscribe { file -> copyToFinalDir(file) }
+compressedReport.subscribe { file -> copyToFinalDir(file) }
+
+def copyToFinalDir (file) { 
+  log.info "Copying ${file.name} into: $outputDir"
+  file.copyTo(outputDir)
+}
+
 def sample(Path path) {
   def name = path.getFileName().toString()
   int start = Math.max(0, name.lastIndexOf('/'))
-  return name.substring(start, name.indexOf("_"))
+  return name.substring(start, name.indexOf("."))
 }
 
 def locus(Path path) {
