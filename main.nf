@@ -82,7 +82,7 @@ failedSubjects = failed.splitCsv()
        [ "${row[0]}.txt", row[1] + '\n' ]
    }
 .map{path -> 
-  tuple(sample(path), path )
+  tuple(sample(path), path, file(params.expected) )
 }
 
 passedSubjects = passed.splitCsv()
@@ -90,7 +90,7 @@ passedSubjects = passed.splitCsv()
        [ "${row[0]}.txt", row[1] + '\n' ]
    }
 .map{path -> 
-  tuple(sample(path), path )
+  tuple(sample(path), path, file(params.expected)  )
 }
 
 // Filtering out the failed subjects
@@ -98,13 +98,13 @@ process filterFailedHml{
   tag{ exp }
 
   input:
-    set exp, file(failedFile) from failedSubjects
+    set exp, file(failedFile), file(expected)  from failedSubjects
 
   output:
     file{"${exp}_failed.xml"} into failedHmlFile
 
   """
-    ngs-filter-samples -i ${params.expected} -s ${failedFile} > ${exp}_failed.xml
+    ngs-filter-samples -i ${expected} -s ${failedFile} > ${exp}_failed.xml
   """
 }
 
@@ -113,13 +113,13 @@ process filterPassedHml{
   tag{ exp }
 
   input:
-    set exp, file(failedFile) from passedSubjects
+    set exp, file(failedFile), file(expected)  from passedSubjects
 
   output:
     file{"${exp}_passed.xml"} into passedHmlFile
 
   """
-    ngs-filter-samples -i ${params.expected} -s ${failedFile} > ${exp}_passed.xml
+    ngs-filter-samples -i ${expected} -s ${failedFile} > ${exp}_passed.xml
   """
 }
 
