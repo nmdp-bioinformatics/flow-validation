@@ -28,11 +28,14 @@ params.experiment  = "ex00"
 params.resolution  = 2
 
 outputDir     = file("${params.outputDir}")
-
 observed      = Channel.fromPath("${params.finalDir}/*.observed.gz").map { path -> tuple(sample(path), locus(path), path )}
 observedFiles = Channel.fromPath("${params.finalDir}/*.observed.gz")
 observed_file = observedFiles.collectFile(name:"${params.finalDir}/${params.experiment}_ngsp_observed.gz")
 
+/*
+  Validating the typing for each subject at each locus
+  - This skips glstrings that were not interpreted 
+*/
 process validateInterpretation {
 	tag{ s }
 
@@ -43,13 +46,16 @@ process validateInterpretation {
     file {"${s}_${locus}_validate.txt"} into validatedFile
 
   """
-    ngs-extract-expected-haploids -i ${params.expected} | ngs-validate-interpretation -l ${locus} -b ${observed_gz} > "${s}_${locus}_validate.txt"
+    zcat ${observed_gz} | perl -ne 'print \$_ if \$_ =~ /HLA-\\D+\\d{0,1}\\*/;' > new_observed.out
+    ngs-extract-expected-haploids -i ${params.expected} | ngs-validate-interpretation -l ${locus} -b new_observed.out > "${s}_${locus}_validate.txt"
   """
 
 }
 validated_file = validatedFile.collectFile(name:"${params.finalDir}/${params.experiment}_ngsp_validated.txt")
 
-
+/*
+  Generating the validation report from the expected, validated and observed files
+*/
 process validationReport{
 	tag{ validated_file }
 
@@ -117,8 +123,9 @@ process filterPassedHml{
   """
 }
 
-passedHmlFile.subscribe { file -> copyToFinalDir(file) }
-failedHmlFile.subscribe { file -> copyToFinalDir(file) }
+//Copying the final hml files and the report to the final directory
+passedHmlFile.subscribe {    file -> copyToFinalDir(file) }
+failedHmlFile.subscribe {    file -> copyToFinalDir(file) }
 compressedReport.subscribe { file -> copyToFinalDir(file) }
 
 def copyToFinalDir (file) { 
