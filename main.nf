@@ -37,7 +37,7 @@ observed_file = observedFiles.collectFile(name:"${params.finalDir}/${params.expe
   - This skips glstrings that were not interpreted 
 */
 process validateInterpretation {
-	tag{ s }
+	tag{ "${s} ${locus}" }
 
   input:
     set s, locus, file(observed_gz) from observed
@@ -93,7 +93,9 @@ passedSubjects = passed.splitCsv()
   tuple(sample(path), path, file(params.expected)  )
 }
 
-// Filtering out the failed subjects
+/*
+  Filtering out the failed subjects
+*/
 process filterFailedHml{
   tag{ exp }
 
@@ -101,14 +103,16 @@ process filterFailedHml{
     set exp, file(failedFile), file(expected)  from failedSubjects
 
   output:
-    file{"${exp}_failed.xml"} into failedHmlFile
+    file{"${exp}_failed.hml"} into failedHmlFile
 
   """
-    ngs-filter-samples -i ${expected} -s ${failedFile} > ${exp}_failed.xml
+    ngs-filter-samples -i ${expected} -s ${failedFile} > ${exp}_failed.hml
   """
 }
 
-// Filtering out the passed subjects
+/*
+  Filtering out the passed subjects
+*/
 process filterPassedHml{
   tag{ exp }
 
@@ -116,10 +120,10 @@ process filterPassedHml{
     set exp, file(failedFile), file(expected)  from passedSubjects
 
   output:
-    file{"${exp}_passed.xml"} into passedHmlFile
+    file{"${exp}_passed.hml"} into passedHmlFile
 
   """
-    ngs-filter-samples -i ${expected} -s ${failedFile} > ${exp}_passed.xml
+    ngs-filter-samples -i ${expected} -s ${failedFile} > ${exp}_passed.hml
   """
 }
 
