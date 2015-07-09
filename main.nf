@@ -21,23 +21,26 @@
     > http://www.gnu.org/licenses/lgpl.html
 
 */
-params.expected    = "${baseDir}/tutorial/output/ex00_ngsp_expected.xml"
-params.finalDir    = "${baseDir}/tutorial"
-params.outputDir   = "${baseDir}"
+params.path        = "${baseDir}/tutorial"
 params.experiment  = "ex00"
 params.resolution  = 2
 
-outputDir     = file("${params.outputDir}")
-observed      = Channel.fromPath("${params.finalDir}/*.observed.gz").map { path -> tuple(sample(path), locus(path), path )}
-observedFiles = Channel.fromPath("${params.finalDir}/*.observed.gz")
-observed_file = observedFiles.collectFile(name:"${params.finalDir}/${params.experiment}_ngsp_observed.gz")
+reportDir=file("${params.path}/${params.experiment}/reports")
+observedDir=file("${params.path}/${params.experiment}/final")
+expected=file("${params.path}/${params.experiment}/hml/${params.experiment}.hml")
+hmlDir=file("${params.path}/${params.experiment}/hml")
+reportDir.mkdirs()
+
+observed      = Channel.fromPath("${observedDir}/*.observed.gz").map { path -> tuple(sample(path), locus(path), path )}
+observedFiles = Channel.fromPath("${observedDir}/*.observed.gz")
+observed_file = observedFiles.collectFile(name:"${observedDir}/${params.experiment}_ngsp_observed.gz")
 
 /*
   Validating the typing for each subject at each locus
   - This skips glstrings that were not interpreted 
 */
 process validateInterpretation {
-	tag{ s }
+	tag{ "${s} ${locus}" }
 
   input:
     set s, locus, file(observed_gz) from observed
@@ -46,12 +49,12 @@ process validateInterpretation {
     file {"${s}_${locus}_validate.txt"} into validatedFile
 
   """
-    zcat ${observed_gz} | perl -ne 'print \$_ if \$_ =~ /HLA-\\D+\\d{0,1}\\*/;' > new_observed.out
-    ngs-extract-expected-haploids -i ${params.expected} | ngs-validate-interpretation -l ${locus} -b new_observed.out > "${s}_${locus}_validate.txt"
+    gzcat ${observed_gz} | perl -ne 'print \$_ if \$_ =~ /HLA-\\D+\\d{0,1}\\*/;' > new_observed.out
+    ngs-extract-expected-haploids -i ${expected} | ngs-validate-interpretation -r ${params.resolution} -l ${locus} -b new_observed.out > "${s}_${locus}_validate.txt"
   """
 
 }
-validated_file = validatedFile.collectFile(name:"${params.finalDir}/${params.experiment}_ngsp_validated.txt")
+validated_file = validatedFile.collectFile(name:"${observedDir}/${params.experiment}_ngsp_validated.txt")
 
 /*
   Generating the validation report from the expected, validated and observed files
@@ -71,7 +74,7 @@ process validationReport{
     file {"validationReport.tar.gz"} into compressedReport
 
 	"""
-		ngs-validation-report -e ${params.expected} -o ${observed_file} -l ${validated_file} -f -r -v 1
+		ngs-validation-report -e ${expected} -o ${observed_file} -l ${validated_file} -f -r -v 1
     tar -zcvf validationReport.tar.gz report
   """
 }
@@ -82,7 +85,7 @@ failedSubjects = failed.splitCsv()
        [ "${row[0]}.txt", row[1] + '\n' ]
    }
 .map{path -> 
-  tuple(sample(path), path, file(params.expected) )
+  tuple(sample(path), path, file(expected) )
 }
 
 passedSubjects = passed.splitCsv()
@@ -90,47 +93,56 @@ passedSubjects = passed.splitCsv()
        [ "${row[0]}.txt", row[1] + '\n' ]
    }
 .map{path -> 
-  tuple(sample(path), path, file(params.expected)  )
+  tuple(sample(path), path, file(expected)  )
 }
 
-// Filtering out the failed subjects
+/*
+  Filtering out the failed subjects
+*/
 process filterFailedHml{
   tag{ exp }
 
   input:
-    set exp, file(failedFile), file(expected)  from failedSubjects
+    set exp, file(failedFile), file(expectedFile)  from failedSubjects
 
   output:
-    file{"${exp}_failed.xml"} into failedHmlFile
+    file{"${exp}_failed.hml"} into failedHmlFile
 
   """
-    ngs-filter-samples -i ${expected} -s ${failedFile} > ${exp}_failed.xml
+    ngs-filter-samples -i ${expectedFile} -s ${failedFile} > ${exp}_failed.hml
   """
 }
 
-// Filtering out the passed subjects
+/*
+  Filtering out the passed subjects
+*/
 process filterPassedHml{
   tag{ exp }
 
   input:
-    set exp, file(failedFile), file(expected)  from passedSubjects
+    set exp, file(failedFile), file(expectedFile)  from passedSubjects
 
   output:
-    file{"${exp}_passed.xml"} into passedHmlFile
+    file{"${exp}_passed.hml"} into passedHmlFile
 
   """
-    ngs-filter-samples -i ${expected} -s ${failedFile} > ${exp}_passed.xml
+    ngs-filter-samples -i ${expectedFile} -s ${failedFile} > ${exp}_passed.hml
   """
 }
 
 //Copying the final hml files and the report to the final directory
 passedHmlFile.subscribe {    file -> copyToFinalDir(file) }
 failedHmlFile.subscribe {    file -> copyToFinalDir(file) }
-compressedReport.subscribe { file -> copyToFinalDir(file) }
+compressedReport.subscribe { file -> copyToReportDir(file) }
 
 def copyToFinalDir (file) { 
-  log.info "Copying ${file.name} into: $outputDir"
-  file.copyTo(outputDir)
+  log.info "Copying ${file.name} into: $hmlDir"
+  file.copyTo(hmlDir)
+}
+
+def copyToReportDir (file) { 
+  log.info "Copying ${file.name} into: $reportDir"
+  file.copyTo(reportDir)
 }
 
 def sample(Path path) {
