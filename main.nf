@@ -49,7 +49,7 @@ process validateInterpretation {
     file {"${s}_${locus}_validate.txt"} into validatedFile
 
   """
-    gzcat ${observed_gz} | perl -ne 'print \$_ if \$_ =~ /HLA-\\D+\\d{0,1}\\*/;' > new_observed.out
+    zcat ${observed_gz} | perl -ne 'print \$_ if \$_ =~ /HLA-\\D+\\d{0,1}\\*/;' > new_observed.out
     ngs-extract-expected-haploids -i ${expected} | ngs-validate-interpretation -r ${params.resolution} -l ${locus} -b new_observed.out > "${s}_${locus}_validate.txt"
   """
 
